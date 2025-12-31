@@ -24,11 +24,6 @@ import { getRandomTopic } from "@/lib/topics";
 import { MOCK_MODE } from "@/lib/mock-data";
 import { AnalyzeResponse } from "@/types/analysis";
 
-// 扩展 Window 接口以支持 webkitSpeechRecognition
-interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    webkitSpeechRecognition: any;
-}
 
 // ============================================
 // 状态机类型定义
@@ -229,6 +224,7 @@ function PracticeContent() {
             // Web Speech API: 实时语音转文字 (UI展示用 + 容灾备份)
             // ------------------------------------------------------------
             if ('webkitSpeechRecognition' in window) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const recognition = new (window as any).webkitSpeechRecognition();
                 recognition.continuous = true; // 连续识别
                 recognition.interimResults = true; // 返回中间结果
@@ -290,6 +286,7 @@ function PracticeContent() {
                 }
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // 停止录音并获取音频 Blob
@@ -350,6 +347,7 @@ function PracticeContent() {
         }, 1000);
 
         return () => clearInterval(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state]);
 
     // 进入录音状态时自动开始录音
