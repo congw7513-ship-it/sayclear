@@ -48,7 +48,7 @@ const PREP_HINTS = [
 // ============================================
 function WaveformVisualizer({ isRecording }: { isRecording: boolean }) {
     const [bars, setBars] = useState<number[]>(Array(40).fill(8));
-    const animationRef = useRef<number>(0);
+    const animationRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (!isRecording) {
