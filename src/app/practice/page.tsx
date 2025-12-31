@@ -20,12 +20,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { getRandomTopic, DEFAULT_TEST_TEXT } from "@/lib/topics";
+import { getRandomTopic } from "@/lib/topics";
 import { MOCK_MODE } from "@/lib/mock-data";
 import { AnalyzeResponse } from "@/types/analysis";
 
 // 扩展 Window 接口以支持 webkitSpeechRecognition
 interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     webkitSpeechRecognition: any;
 }
 
@@ -51,7 +52,7 @@ function WaveformVisualizer({ isRecording }: { isRecording: boolean }) {
 
     useEffect(() => {
         if (!isRecording) {
-            setBars(Array(40).fill(8));
+            setTimeout(() => setBars(Array(40).fill(8)), 0);
             return;
         }
 
@@ -167,6 +168,7 @@ function PracticeContent() {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognitionRef = useRef<any>(null); // Web Speech API 实例
     const fullTranscriptRef = useRef(""); // 累积的完整识别文本
 
@@ -232,6 +234,7 @@ function PracticeContent() {
                 recognition.interimResults = true; // 返回中间结果
                 recognition.lang = 'zh-CN'; // 中文
 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 recognition.onresult = (event: any) => {
                     let interimTranscript = '';
                     let finalTranscriptChunk = '';
@@ -250,6 +253,7 @@ function PracticeContent() {
                     setRealtimeText(interimTranscript || finalTranscriptChunk || realtimeText);
                 };
 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 recognition.onerror = (event: any) => {
                     console.warn("Web Speech API error:", event.error);
                 };
