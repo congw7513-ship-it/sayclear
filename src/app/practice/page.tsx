@@ -47,7 +47,7 @@ const PREP_HINTS = [
 // ============================================
 function WaveformVisualizer({ isRecording }: { isRecording: boolean }) {
     const [bars, setBars] = useState<number[]>(Array(40).fill(8));
-    const animationRef = useRef<number>();
+    const animationRef = useRef<number>(0);
 
     useEffect(() => {
         if (!isRecording) {
@@ -227,7 +227,7 @@ function PracticeContent() {
             // Web Speech API: 实时语音转文字 (UI展示用 + 容灾备份)
             // ------------------------------------------------------------
             if ('webkitSpeechRecognition' in window) {
-                const recognition = new window.webkitSpeechRecognition();
+                const recognition = new (window as any).webkitSpeechRecognition();
                 recognition.continuous = true; // 连续识别
                 recognition.interimResults = true; // 返回中间结果
                 recognition.lang = 'zh-CN'; // 中文
