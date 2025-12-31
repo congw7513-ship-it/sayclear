@@ -4,7 +4,7 @@ import { AnalysisResult } from "@/types/analysis";
 // MOCK 模式开关
 // 设为 true 时不调用 OpenAI API，直接返回假数据
 // ============================================
-export const MOCK_MODE = false;
+export const MOCK_MODE = process.env.MOCK_MODE === "true";
 
 // Mock 数据：模拟一个中等水平的分析结果
 export const MOCK_ANALYSIS_RESULT: AnalysisResult = {

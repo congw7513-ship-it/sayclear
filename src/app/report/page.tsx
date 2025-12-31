@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+// import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, RotateCcw, TrendingUp, Layers, Zap, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
@@ -31,20 +31,24 @@ export default function ReportPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // 尝试从 localStorage 读取分析结果
-        const stored = localStorage.getItem("analysisResult");
-        if (stored) {
-            try {
-                setResult(JSON.parse(stored));
-            } catch {
-                // 解析失败，使用 Mock 数据
+        // 使用 setTimeout 避免在 effect 中同步 setState (Linter 警告)
+        const timer = setTimeout(() => {
+            // 尝试从 localStorage 读取分析结果
+            const stored = localStorage.getItem("analysisResult");
+            if (stored) {
+                try {
+                    setResult(JSON.parse(stored));
+                } catch {
+                    // 解析失败，使用 Mock 数据
+                    setResult(MOCK_ANALYSIS_RESULT);
+                }
+            } else {
+                // 没有存储的结果，使用 Mock 数据（方便开发测试）
                 setResult(MOCK_ANALYSIS_RESULT);
             }
-        } else {
-            // 没有存储的结果，使用 Mock 数据（方便开发测试）
-            setResult(MOCK_ANALYSIS_RESULT);
-        }
-        setLoading(false);
+            setLoading(false);
+        }, 0);
+        return () => clearTimeout(timer);
     }, []);
 
     if (loading) {
@@ -221,14 +225,14 @@ export default function ReportPage() {
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: i * 0.1 }}
                                             className={`p-4 rounded-lg border-l-4 ${segment.type === "highlight_good"
-                                                    ? "bg-green-50 dark:bg-green-950/20 border-green-500"
-                                                    : "bg-red-50 dark:bg-red-950/20 border-red-500"
+                                                ? "bg-green-50 dark:bg-green-950/20 border-green-500"
+                                                : "bg-red-50 dark:bg-red-950/20 border-red-500"
                                                 }`}
                                         >
-                                            <p className="font-medium mb-2">"{segment.text}"</p>
+                                            <p className="font-medium mb-2">&quot;{segment.text}&quot;</p>
                                             <p className={`text-sm ${segment.type === "highlight_good"
-                                                    ? "text-green-700 dark:text-green-300"
-                                                    : "text-red-700 dark:text-red-300"
+                                                ? "text-green-700 dark:text-green-300"
+                                                : "text-red-700 dark:text-red-300"
                                                 }`}>
                                                 {segment.comment}
                                             </p>

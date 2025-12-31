@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
         // ============================================
         // Step 1: 检查 MOCK 模式
         // ============================================
-        if (MOCK_MODE === true) {
+        if (MOCK_MODE) {
             console.log("🎭 [MOCK MODE] 返回模拟数据，跳过真实 API");
             await new Promise((resolve) => setTimeout(resolve, 1500));
             return NextResponse.json<AnalyzeResponse>({
