@@ -9,7 +9,7 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
+    <main className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:p-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -19,10 +19,10 @@ export default function HomePage() {
         <Badge variant="secondary" className="mb-4">
           Logic Master MVP
         </Badge>
-        <h1 className="text-5xl font-bold tracking-tight mb-4">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
           提升你的表达逻辑
         </h1>
-        <p className="text-xl text-muted-foreground max-w-md mx-auto">
+        <p className="text-lg md:text-xl text-muted-foreground max-w-md mx-auto">
           录制你的演讲，获得 AI 驱动的 PREP 结构分析反馈
         </p>
       </motion.div>

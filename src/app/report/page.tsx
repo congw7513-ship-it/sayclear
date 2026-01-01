@@ -108,7 +108,7 @@ export default function ReportPage() {
                 {/* 标题和诊断 */}
                 <div className="text-center mb-8">
                     <Badge variant="secondary" className="mb-4">分析完成</Badge>
-                    <h1 className="text-4xl font-bold tracking-tight mb-4">你的表达报告</h1>
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">你的表达报告</h1>
 
                     {/* 综合评分 */}
                     <motion.div
@@ -182,7 +182,7 @@ export default function ReportPage() {
                         <CardTitle>PREP 结构检测</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-4">
                             <Badge variant={prep_analysis.point_detected ? "default" : "destructive"}>
                                 {prep_analysis.point_detected ? "✓ 检测到观点" : "✗ 未检测到明确观点"}
                             </Badge>
