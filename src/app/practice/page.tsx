@@ -7,14 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
     ArrowLeft,
-    Brain,
     Mic,
-    Square,
     Loader2,
-    Lightbulb,
     CheckCircle2,
     MicOff,
     RefreshCw
@@ -153,52 +149,6 @@ function QuickScenarioSelector({
                 >
                     {item.label}
                 </button>
-            ))}
-        </div>
-    );
-}
-
-// ============================================
-// 动态波形可视化组件（精简版）
-// ============================================
-function WaveformVisualizer({ isRecording }: { isRecording: boolean }) {
-    const [bars, setBars] = useState<number[]>(Array(20).fill(4));
-    const animationRef = useRef<number | null>(null);
-
-    useEffect(() => {
-        if (!isRecording) {
-            setTimeout(() => setBars(Array(20).fill(4)), 0);
-            return;
-        }
-
-        const animate = () => {
-            setBars(prev => prev.map(() =>
-                isRecording ? Math.random() * 24 + 6 : 4
-            ));
-            animationRef.current = requestAnimationFrame(animate);
-        };
-
-        const interval = setInterval(() => {
-            animate();
-        }, 100);
-
-        return () => {
-            clearInterval(interval);
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
-        };
-    }, [isRecording]);
-
-    return (
-        <div className="flex items-center justify-center gap-0.5 h-10">
-            {bars.map((height, i) => (
-                <motion.div
-                    key={i}
-                    className="w-0.5 bg-primary/60 rounded-full"
-                    animate={{ height }}
-                    transition={{ duration: 0.1 }}
-                />
             ))}
         </div>
     );
@@ -863,7 +813,7 @@ function PracticeContent() {
                                                         transition={{ duration: 0.2 }}
                                                         className="text-base font-medium text-gray-400 text-center max-w-full px-4 break-words"
                                                     >
-                                                        "{realtimeText}"
+                                                        &quot;{realtimeText}&quot;
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>

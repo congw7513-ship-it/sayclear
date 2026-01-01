@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic } from "lucide-react";
 import { COMFORT_MESSAGES, type ScenarioMode } from "@/lib/constants";
