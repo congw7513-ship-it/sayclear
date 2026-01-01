@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { getRandomTopic } from "@/lib/topics";
+
 import { MOCK_MODE } from "@/lib/mock-data";
 import { AnalyzeResponse } from "@/types/analysis";
 
@@ -31,13 +31,7 @@ import { AnalyzeResponse } from "@/types/analysis";
 // ============================================
 type PracticeState = "idle" | "thinking" | "recording" | "analyzing";
 
-// NVC (非暴力沟通) 提示框架 - 仅在后台分析时使用，不再显示给用户
-const NVC_HINTS = [
-    { letter: "O", title: "Observation", desc: "描述事实" },
-    { letter: "F", title: "Feeling", desc: "表达感受" },
-    { letter: "N", title: "Need", desc: "说出需求" },
-    { letter: "R", title: "Request", desc: "提出请求" },
-];
+
 
 // 场景配置 - 情绪翻译官定位
 type ScenarioMode = "work" | "relationship";
@@ -477,11 +471,7 @@ function PracticeContent() {
         };
     }, [state, startRecording, cleanupRecording]);
 
-    // 开始思考
-    const handleStartThinking = () => {
-        setState("thinking");
-        setCountdown(30);
-    };
+
 
     // 跳过思考，直接录音
     const handleSkipToRecording = () => {
@@ -505,7 +495,6 @@ function PracticeContent() {
         setState("analyzing");
 
         try {
-            let formData: FormData | null = null;
             let jsonBody: string | null = null;
 
             // 停止录音清理状态 (不再上传音频文件，直接用实时转写的文本)

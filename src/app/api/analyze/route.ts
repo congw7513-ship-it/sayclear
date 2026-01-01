@@ -70,7 +70,7 @@ Output JSON:
 }
 
 # Current Context
-Input Mode: \${mode} (Adjust tone based on '\${mode}')
+Input Mode: ${mode} (Adjust tone based on '${mode}')
 
 # Output JSON Format
 Strictly return JSON matching this structure:

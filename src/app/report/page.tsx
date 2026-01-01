@@ -5,26 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 // import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, RotateCcw, Heart, MessageCircle, Shield, AlertCircle } from "lucide-react";
+import { ArrowLeft, RotateCcw, Heart, MessageCircle, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { AnalysisResult, Segment } from "@/types/analysis";
 import { MOCK_ANALYSIS_RESULT } from "@/lib/mock-data";
 
-// 根据分数获取颜色
-function getScoreColor(score: number): string {
-    if (score >= 80) return "text-green-500";
-    if (score >= 60) return "text-yellow-500";
-    return "text-red-500";
-}
 
-// 根据分数获取进度条颜色
-function getProgressColor(score: number): string {
-    if (score >= 80) return "bg-green-500";
-    if (score >= 60) return "bg-yellow-500";
-    return "bg-red-500";
-}
 
 export default function ReportPage() {
     const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -79,7 +66,7 @@ export default function ReportPage() {
         );
     }
 
-    const { scores, diagnosis, advice, segments, original_transcript } = result;
+    const { scores, advice, segments, original_transcript } = result;
     const avgScore = Math.round((scores.empathy + scores.nvc_score + scores.safety) / 3);
 
 
