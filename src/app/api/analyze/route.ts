@@ -10,8 +10,9 @@ import { MOCK_MODE, MOCK_ANALYSIS_RESULT } from "@/lib/mock-data";
 const MINIMAX_API_URL = "https://api.minimax.chat/v1/text/chatcompletion_v2";
 const MINIMAX_MODEL = "MiniMax-Text-01";
 
-// 本地 Faster-Whisper STT 服务
-const LOCAL_WHISPER_URL = "http://localhost:5000/transcribe";
+// Groq Whisper STT API (云端)
+const GROQ_API_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
+const GROQ_WHISPER_MODEL = "whisper-large-v3";
 
 // System Prompt for Logic Master
 const SYSTEM_PROMPT = `# Role
@@ -76,32 +77,36 @@ Analyze the user's input text following these steps:
   ]
 }`;
 
-// 使用本地 Faster-Whisper 进行语音转文字
+// 使用 Groq Whisper API 进行语音转文字
 // ============================================
-async function transcribeAudioWithLocalWhisper(
+async function transcribeAudioWithGroq(
     audioFile: File
 ): Promise<string> {
-    console.log("🎤 [STT] 开始语音转文字 (本地 Whisper)...");
+    console.log("🎤 [STT] 开始语音转文字 (Groq Whisper)...");
     console.log(`🎤 [STT] 文件: ${audioFile.name}, 大小: ${audioFile.size} bytes, 类型: ${audioFile.type}`);
-    console.log("正在使用本地 Faster-Whisper 模型进行识别...");
+
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+        throw new Error("GROQ_API_KEY 未配置");
+    }
 
     const formData = new FormData();
     formData.append("file", audioFile);
+    formData.append("model", GROQ_WHISPER_MODEL);
+    formData.append("language", "zh"); // 中文
 
-    const response = await fetch(LOCAL_WHISPER_URL, {
+    const response = await fetch(GROQ_API_URL, {
         method: "POST",
+        headers: {
+            "Authorization": `Bearer ${groqApiKey}`,
+        },
         body: formData,
     });
 
     if (!response.ok) {
         const errorText = await response.text();
-        console.error("🎤 [STT] ❌ 转录失败:", errorText);
-
-        // 如果本地服务未启动，返回更友好的错误
-        if (response.status === 0 || errorText.includes("ECONNREFUSED")) {
-            throw new Error("本地 Whisper 服务未启动，请先运行 whisper-server/start.bat");
-        }
-        throw new Error(`STT 错误: ${response.status} - ${errorText}`);
+        console.error("🎤 [STT] ❌ Groq 转录失败:", errorText);
+        throw new Error(`Groq STT 错误: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -209,8 +214,8 @@ export async function POST(request: NextRequest) {
             if (audioFile && audioFile.size > 0) {
                 console.log(`🎵 [API] 检测到音频文件: ${audioFile.name} (${audioFile.size} bytes)`);
 
-                // 🔑 关键步骤: 调用本地 Whisper 将音频转为文字
-                textToAnalyze = await transcribeAudioWithLocalWhisper(audioFile);
+                // 🔑 关键步骤: 调用 Groq Whisper 将音频转为文字
+                textToAnalyze = await transcribeAudioWithGroq(audioFile);
 
             } else {
                 // FormData 中没有有效音频，检查是否有文本
