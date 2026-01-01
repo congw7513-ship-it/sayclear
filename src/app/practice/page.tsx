@@ -114,26 +114,70 @@ const SCENARIO_POOLS: Record<ScenarioMode, Scenario[]> = {
 };
 
 // ============================================
-// 动态波形可视化组件（带真实反馈）
+// 高频场景胶囊配置 (Conflict-Avoidant Support)
+// ============================================
+const QUICK_SCENARIOS = {
+    work: [
+        { label: "拒绝白嫖", prompt: "同事管我要付费资源/样品，没给钱，我不知道怎么拒绝..." },
+        { label: "边界被侵犯", prompt: "休息时间/私人空间一直被工作电话打扰，我想说..." },
+        { label: "被打断/无视", prompt: "我说话时总被同事打断或强行切话题，我很不爽..." },
+        { label: "谈钱/利益", prompt: "我觉得我的付出和回报不成正比，想争取..." }
+    ],
+    relationship: [
+        { label: "伴侣冷暴力", prompt: "对方拒绝沟通/回避问题，我感觉很无助..." },
+        { label: "家务分配不公", prompt: "只有我一个人在忙里忙外，对方在那玩手机..." },
+        { label: "这种玩笑不好笑", prompt: "对方说的话让我不舒服，但他觉得我开不起玩笑..." }
+    ]
+};
+
+function QuickScenarioSelector({
+    mode,
+    onSelect
+}: {
+    mode: ScenarioMode;
+    onSelect: (scenario: { label: string; prompt: string }) => void
+}) {
+    return (
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-6 max-w-lg mx-auto">
+            {QUICK_SCENARIOS[mode]?.map((item) => (
+                <button
+                    key={item.label}
+                    onClick={() => onSelect(item)}
+                    className="
+                        bg-gray-100 hover:bg-gray-200 active:bg-blue-100 
+                        dark:bg-gray-800 dark:hover:bg-gray-700 dark:active:bg-blue-900/40
+                        text-gray-600 dark:text-gray-300 active:text-blue-600 dark:active:text-blue-400
+                        text-sm px-3 py-1.5 rounded-full transition-all duration-200
+                        border border-transparent active:border-blue-200
+                    "
+                >
+                    {item.label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+// ============================================
+// 动态波形可视化组件（精简版）
 // ============================================
 function WaveformVisualizer({ isRecording }: { isRecording: boolean }) {
-    const [bars, setBars] = useState<number[]>(Array(40).fill(8));
+    const [bars, setBars] = useState<number[]>(Array(20).fill(4));
     const animationRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (!isRecording) {
-            setTimeout(() => setBars(Array(40).fill(8)), 0);
+            setTimeout(() => setBars(Array(20).fill(4)), 0);
             return;
         }
 
         const animate = () => {
             setBars(prev => prev.map(() =>
-                isRecording ? Math.random() * 60 + 10 : 8
+                isRecording ? Math.random() * 24 + 6 : 4
             ));
             animationRef.current = requestAnimationFrame(animate);
         };
 
-        // 降低帧率到约 10fps 以节省资源
         const interval = setInterval(() => {
             animate();
         }, 100);
@@ -147,11 +191,11 @@ function WaveformVisualizer({ isRecording }: { isRecording: boolean }) {
     }, [isRecording]);
 
     return (
-        <div className="flex items-center justify-center gap-1 h-24">
+        <div className="flex items-center justify-center gap-0.5 h-10">
             {bars.map((height, i) => (
                 <motion.div
                     key={i}
-                    className="w-1 bg-primary rounded-full"
+                    className="w-0.5 bg-primary/60 rounded-full"
                     animate={{ height }}
                     transition={{ duration: 0.1 }}
                 />
@@ -195,24 +239,101 @@ function RecordingMicIcon() {
 }
 
 // ============================================
-// 倒计时数字组件
+// 呼吸动画光晕
 // ============================================
-function CountdownDisplay({ seconds, label }: { seconds: number; label: string }) {
+function BreathingHalo({ mode }: { mode: ScenarioMode }) {
+    return (
+        <div className="relative flex items-center justify-center w-48 h-48 mx-auto mb-4">
+            {/* 核心光晕层 1 */}
+            <motion.div
+                animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.3, 0.6, 0.3],
+                }}
+                transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                }}
+                className={`absolute inset-0 rounded-full blur-3xl ${mode === "work" ? "bg-blue-200/50" : "bg-pink-200/50"
+                    }`}
+            />
+            {/* 核心光晕层 2 (错开节奏) */}
+            <motion.div
+                animate={{
+                    scale: [1.1, 1.3, 1.1],
+                    opacity: [0.2, 0.4, 0.2],
+                }}
+                transition={{
+                    duration: 4,
+                    delay: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                }}
+                className={`absolute inset-0 rounded-full blur-2xl ${mode === "work" ? "bg-cyan-100/40" : "bg-rose-100/40"
+                    }`}
+            />
+
+            {/* 录音图标 (居中) */}
+            <div className="relative z-10 bg-background/80 p-6 rounded-full shadow-sm backdrop-blur-sm border border-muted/20">
+                <RecordingMicIcon />
+            </div>
+        </div>
+    );
+}
+
+// ============================================
+// 轮播安抚文案
+// ============================================
+const COMFORT_MESSAGES = [
+    "慢慢来，我在听...",
+    "把你真实的想法说出来...",
+    "这里很安全...",
+    "就像和朋友聊天一样...",
+    "不用担心措辞...",
+];
+
+function ComfortingMessageDisplay() {
+    const [index, setIndex] = useState(0);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setIndex((prev) => (prev + 1) % COMFORT_MESSAGES.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, []);
+
+    return (
+        <div className="h-8 flex items-center justify-center mb-2">
+            <AnimatePresence mode="wait">
+                <motion.p
+                    key={index}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-muted-foreground font-medium"
+                >
+                    {COMFORT_MESSAGES[index]}
+                </motion.p>
+            </AnimatePresence>
+        </div>
+    );
+}
+
+// ============================================
+// 正向计时器 (Hide Anxiety)
+// ============================================
+function RecordingTimer({ seconds }: { seconds: number }) {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     const timeString = `${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 
     return (
-        <div className="text-center">
-            <motion.div
-                key={seconds}
-                initial={{ scale: 1.1, opacity: 0.5 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-7xl font-mono font-bold tracking-tight"
-            >
-                {timeString}
-            </motion.div>
-            <p className="text-muted-foreground mt-2">{label}</p>
+        <div className="text-center mt-2">
+            <span className="text-sm font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md">
+                已录制 {timeString}
+            </span>
         </div>
     );
 }
@@ -257,8 +378,12 @@ function PracticeContent() {
 
     // 状态管理
     const [state, setState] = useState<PracticeState>("idle");
-    const [countdown, setCountdown] = useState(30);
-    const [permissionDenied, setPermissionDenied] = useState(false);
+    const [recordingDuration, setRecordingDuration] = useState(0); // 正向计时 (s)
+    const [permissionErrorType, setPermissionErrorType] = useState<"denied" | "not-found" | "other" | null>(null);
+
+    // Quick Scenario State
+    const [activeScenarioLabel, setActiveScenarioLabel] = useState<string | null>(null);
+    const [scenarioContext, setScenarioContext] = useState<string>("");
 
     // 实时语音转文字状态
     const [realtimeText, setRealtimeText] = useState("");
@@ -360,6 +485,19 @@ function PracticeContent() {
                     console.warn("Web Speech API error:", event.error);
                 };
 
+                // 关键修复：当识别自动结束时（用户停顿），自动重启
+                recognition.onend = () => {
+                    // 检查录音是否仍在进行中
+                    if (streamRef.current && mediaRecorderRef.current?.state === "recording") {
+                        console.log("[Web Speech API] 识别结束，自动重启...");
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.warn("[Web Speech API] 重启失败:", e);
+                        }
+                    }
+                };
+
                 recognitionRef.current = recognition;
                 recognition.start();
             } else {
@@ -367,29 +505,33 @@ function PracticeContent() {
             }
 
             console.log("[录音] ✅ 开始录音");
-            setPermissionDenied(false);
+            setPermissionErrorType(null);
 
         } catch (error) {
             console.error("[录音] 获取麦克风权限失败:", error);
-            setPermissionDenied(true);
 
             if (error instanceof DOMException) {
-                if (error.name === "NotAllowedError") {
+                if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+                    setPermissionErrorType("denied");
                     toast.error("麦克风权限被拒绝", {
                         description: "请在浏览器设置中允许访问麦克风",
                         duration: 5000,
                     });
                 } else if (error.name === "NotFoundError") {
+                    setPermissionErrorType("not-found");
                     toast.error("未找到麦克风", {
                         description: "请确保您的设备有可用的麦克风",
                         duration: 5000,
                     });
                 } else {
+                    setPermissionErrorType("other");
                     toast.error("无法访问麦克风", {
                         description: error.message,
                         duration: 5000,
                     });
                 }
+            } else {
+                setPermissionErrorType("other");
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -432,35 +574,21 @@ function PracticeContent() {
         });
     }, []);
 
-    // 倒计时逻辑
+    // 正向计时逻辑 (Count Up)
     useEffect(() => {
-        if (state !== "thinking" && state !== "recording") return;
+        if (state !== "recording") return;
 
         const timer = setInterval(() => {
-            setCountdown((prev) => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    if (state === "thinking") {
-                        setState("recording");
-                        setCountdown(120);
-                    } else if (state === "recording") {
-                        handleSubmit();
-                    }
-                    return 0;
-                }
-                return prev - 1;
-            });
+            setRecordingDuration((prev) => prev + 1);
         }, 1000);
 
         return () => clearInterval(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state]);
 
     // 进入录音状态时自动开始录音
+    // 状态变化时的清理工作 (注意：不再自动 startRecording，必须由点击触发)
     useEffect(() => {
-        if (state === "recording") {
-            startRecording();
-        } else {
+        if (state !== "recording") {
             cleanupRecording();
         }
 
@@ -469,14 +597,16 @@ function PracticeContent() {
                 cleanupRecording();
             }
         };
-    }, [state, startRecording, cleanupRecording]);
+    }, [state, cleanupRecording]);
 
 
 
-    // 跳过思考，直接录音
-    const handleSkipToRecording = () => {
+    // 跳过思考，直接录音 (点击触发，兼容 iOS)
+    const handleStartPractice = async () => {
         setState("recording");
-        setCountdown(120);
+        setRecordingDuration(0);
+        // 必须在点击事件中直接调用 getUserMedia
+        await startRecording();
     };
 
     // 提交分析
@@ -506,7 +636,9 @@ function PracticeContent() {
                 console.log("[提交] 文本内容:", fullTranscriptRef.current);
 
                 jsonBody = JSON.stringify({
-                    text: fullTranscriptRef.current,
+                    text: activeScenarioLabel
+                        ? `【当前场景：${activeScenarioLabel} - ${scenarioContext}】\n用户发言：${fullTranscriptRef.current}`
+                        : fullTranscriptRef.current,
                     mode
                 });
             } else {
@@ -564,22 +696,14 @@ function PracticeContent() {
     // 换一道题 (已废弃，现在使用场景模式)
     // const handleNewTopic = () => {};
 
-    // 计算进度百分比
-    const getProgress = () => {
-        if (state === "thinking") {
-            return ((30 - countdown) / 30) * 100;
-        }
-        if (state === "recording") {
-            return ((120 - countdown) / 120) * 100;
-        }
-        return 0;
-    };
+    // 计算进度百分比 (已废弃，不再显示倒计时进度条)
+    // const getProgress = () => ...
 
     return (
-        <main className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:p-8">
-            <div className="w-full max-w-2xl">
+        <main className="min-h-screen bg-background flex flex-col items-center justify-center p-2 md:p-4 overflow-hidden">
+            <div className="w-full max-w-xl">
                 {/* 顶部导航 */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                     <Link href="/">
                         <Button variant="ghost" size="sm" disabled={state === "analyzing"}>
                             <ArrowLeft className="mr-2 w-4 h-4" />
@@ -623,13 +747,11 @@ function PracticeContent() {
                         <CardTitle className="text-2xl md:text-3xl mb-2">{currentScenario.title}</CardTitle>
                     </CardHeader>
 
-                    <CardContent className="pt-6 space-y-6">
+                    <CardContent className="pt-4 space-y-4">
                         {/* 场景描述 */}
-                        <div className="bg-muted p-4 md:p-6 rounded-lg">
-                            <p className="text-lg text-center leading-relaxed whitespace-pre-line">
-                                <p className="text-lg text-center leading-relaxed whitespace-pre-line">
-                                    {currentScenario.subtitle}
-                                </p>
+                        <div className="bg-muted p-3 md:p-4 rounded-lg">
+                            <p className="text-base text-center leading-normal whitespace-pre-line">
+                                {currentScenario.subtitle}
                             </p>
                         </div>
 
@@ -647,9 +769,9 @@ function PracticeContent() {
                                     className="flex flex-col gap-3 pt-4"
                                 >
                                     <Button
-                                        size="lg"
-                                        className="w-full text-lg h-14"
-                                        onClick={handleSkipToRecording}
+                                        size="default"
+                                        className="w-full text-base h-12"
+                                        onClick={handleStartPractice}
                                     >
                                         <Mic className="mr-2 w-5 h-5" />
                                         {currentScenario.buttonText}
@@ -660,60 +782,7 @@ function PracticeContent() {
                             {/* ============================================ */}
                             {/* THINKING 状态：30秒思考倒计时 + PREP 提示 */}
                             {/* ============================================ */}
-                            {state === "thinking" && (
-                                <motion.div
-                                    key="thinking"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                    transition={{ duration: 0.3 }}
-                                    className="space-y-6"
-                                >
-                                    <div className="text-center pb-2">
-                                        <div className="flex items-center justify-center gap-2 text-primary mb-4">
-                                            <Brain className="w-6 h-6 animate-pulse" />
-                                            <span className="font-medium">思考时间</span>
-                                        </div>
-                                        <CountdownDisplay seconds={countdown} label="整理一下思绪..." />
-                                    </div>
-                                    <div className="space-y-6">
-                                        <Progress value={getProgress()} className="h-2" />
 
-                                        {/* NVC 提示卡片 (已隐藏) */}
-                                        {/* <div className="grid grid-cols-4 gap-2">
-                                            {NVC_HINTS.map((hint: { letter: string; desc: string }, i: number) => (
-                                                <motion.div
-                                                    key={i}
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: i * 0.1 }}
-                                                    className="bg-muted p-3 rounded-lg text-center"
-                                                >
-                                                    <div className="text-2xl font-bold text-primary">{hint.letter}</div>
-                                                    <div className="text-xs text-muted-foreground">{hint.desc}</div>
-                                                </motion.div>
-                                            ))}
-                                        </div> */}
-
-                                        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
-                                            <div className="flex items-start gap-2">
-                                                <Lightbulb className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                                                <p className="text-sm text-amber-800 dark:text-amber-200">
-                                                    <strong>提示：</strong>做最真实的自己，不需要任何伪装。
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <Button
-                                            size="lg"
-                                            className="w-full"
-                                            onClick={handleSkipToRecording}
-                                        >
-                                            {currentScenario.buttonText}
-                                        </Button>
-                                    </div>
-                                </motion.div>
-                            )}
 
                             {/* ============================================ */}
                             {/* RECORDING 状态：录音中 + 波形动画 */}
@@ -728,26 +797,62 @@ function PracticeContent() {
                                     className="space-y-6"
                                 >
                                     <div className="text-center pb-2">
-                                        <div className="flex items-center justify-center gap-2 text-red-500 mb-4">
-                                            {permissionDenied ? (
-                                                <>
-                                                    <MicOff className="w-6 h-6" />
-                                                    <span className="font-medium">麦克风不可用</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <RecordingMicIcon />
-                                                    <span className="font-medium">正在录音</span>
-                                                </>
-                                            )}
-                                        </div>
-                                        <CountdownDisplay seconds={countdown} label="尽情表达你的感受" />
+                                        {permissionErrorType ? (
+                                            <div className="flex flex-col items-center justify-center h-48 mb-4">
+                                                <MicOff className="w-10 h-10 text-destructive/50 mb-4" />
+                                                <span className="font-medium text-destructive">
+                                                    {permissionErrorType === "denied" ? "麦克风被禁用" : "麦克风错误"}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {/* 高频场景胶囊 */}
+                                                <QuickScenarioSelector
+                                                    mode={mode}
+                                                    onSelect={(item) => {
+                                                        setActiveScenarioLabel(item.label);
+                                                        setScenarioContext(item.prompt);
+                                                        toast.success(`已切换: ${item.label}`, { duration: 1500 });
+                                                    }}
+                                                />
+
+                                                {/* 核心视觉：呼吸光晕 + 录音中的文案 */}
+                                                <BreathingHalo mode={mode} />
+
+                                                {/* 动态引导文案 */}
+                                                <div className="h-16 flex items-center justify-center mb-2 px-4 text-center">
+                                                    <AnimatePresence mode="wait">
+                                                        {activeScenarioLabel ? (
+                                                            <motion.div
+                                                                key="scenario-prompt"
+                                                                initial={{ opacity: 0, y: 10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                exit={{ opacity: 0, y: -10 }}
+                                                                className="space-y-1"
+                                                            >
+                                                                <p className="text-primary font-medium">
+                                                                    正在模拟【{activeScenarioLabel.replace(/^[^\u4e00-\u9fa5]+/, '')}】场景
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                                                                    &quot;别怕，把你的真实顾虑说出来，AI 帮你撑腰&quot;
+                                                                </p>
+                                                            </motion.div>
+                                                        ) : (
+                                                            <ComfortingMessageDisplay key="default-comfort" />
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
+
+                                                <RecordingTimer seconds={recordingDuration} />
+                                            </>
+                                        )}
                                     </div>
-                                    <div className="space-y-6">
-                                        <Progress value={getProgress()} className="h-2" />
+                                    <div className="space-y-4">
+                                        {/* 移除进度条 */}
+                                        {/* <Progress value={getProgress()} className="h-2" /> */}
 
                                         {/* 实时字幕区域 */}
-                                        <div className="h-12 flex items-center justify-center mb-4">
+                                        <div className="h-10 flex items-center justify-center mb-2">
                                             <AnimatePresence mode="wait">
                                                 {realtimeText && (
                                                     <motion.div
@@ -756,26 +861,25 @@ function PracticeContent() {
                                                         animate={{ opacity: 1, y: 0 }}
                                                         exit={{ opacity: 0, y: -10 }}
                                                         transition={{ duration: 0.2 }}
-                                                        className="text-lg md:text-xl font-medium text-gray-400 text-center max-w-full px-4 break-words"
+                                                        className="text-base font-medium text-gray-400 text-center max-w-full px-4 break-words"
                                                     >
-                                                        “{realtimeText}”
+                                                        "{realtimeText}"
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>
                                         </div>
 
-                                        {/* 波形动画 */}
-                                        <div className="bg-muted rounded-lg p-4">
-                                            {permissionDenied ? (
-                                                <div className="h-24 flex flex-col items-center justify-center text-muted-foreground">
-                                                    <MicOff className="w-8 h-8 mb-2" />
-                                                    <p className="text-sm">麦克风权限被拒绝</p>
-                                                    <p className="text-xs">将使用默认文本进行演示</p>
-                                                </div>
-                                            ) : (
-                                                <WaveformVisualizer isRecording={true} />
-                                            )}
-                                        </div>
+                                        {/* 麦克风错误提示（仅在有错误时显示） */}
+                                        {permissionErrorType && (
+                                            <div className="bg-muted rounded-lg p-3 text-center text-muted-foreground">
+                                                <MicOff className="w-6 h-6 mx-auto mb-1 text-destructive/50" />
+                                                <p className="text-sm font-medium">
+                                                    {permissionErrorType === "denied" && "麦克风权限被拒绝"}
+                                                    {permissionErrorType === "not-found" && "未检测到麦克风"}
+                                                    {permissionErrorType === "other" && "麦克风访问失败"}
+                                                </p>
+                                            </div>
+                                        )}
 
                                         {/* NVC 提醒 (已隐藏) */}
                                         {/* <div className="grid grid-cols-4 gap-1 text-center text-xs text-muted-foreground">
@@ -787,13 +891,12 @@ function PracticeContent() {
                                         </div> */}
 
                                         <Button
-                                            variant="destructive"
-                                            size="lg"
-                                            className="w-full min-h-[48px]"
+                                            variant="outline"
+                                            size="default"
+                                            className="w-full h-12 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
                                             onClick={handleSubmit}
                                         >
-                                            <Square className="mr-2 w-4 h-4" />
-                                            完成录音
+                                            ✓ 完成录音，开始分析
                                         </Button>
                                     </div>
                                 </motion.div>

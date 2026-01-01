@@ -93,11 +93,18 @@ export default function ReportPage() {
             <p className="text-xl leading-relaxed font-medium">
                 {parts.map((part, i) => {
                     const segment = safeSegments.find(s => s.text === part);
-                    if (segment && segment.type === "highlight_bad") {
+
+                    if (segment) {
+                        const isGood = segment.type === "highlight_good";
                         return (
                             <span
                                 key={i}
-                                className="text-red-600 dark:text-red-400 border-b-2 border-red-400 dark:border-red-600 cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors px-0.5 rounded-sm"
+                                className={`
+                                    border-b-2 cursor-pointer transition-colors px-0.5 rounded-sm
+                                    ${isGood
+                                        ? "text-green-700 dark:text-green-400 border-green-400 dark:border-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
+                                        : "text-red-700 dark:text-red-400 border-red-400 dark:border-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"}
+                                `}
                                 onClick={() => setSelectedSegment(segment)}
                             >
                                 {part}
@@ -141,7 +148,10 @@ export default function ReportPage() {
                             <MessageCircle className="w-5 h-5 text-primary" />
                             原文批改
                         </CardTitle>
-                        <CardDescription>点击 <span className="text-red-500 font-medium border-b border-red-400">红色文字</span> 查看具体问题</CardDescription>
+                        <CardDescription>
+                            点击 <span className="text-red-500 font-medium border-b border-red-400">红色文字</span> 查看问题，
+                            点击 <span className="text-green-600 font-medium border-b border-green-400">绿色文字</span> 查看亮点
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {/* 原文展示区 */}
@@ -157,15 +167,32 @@ export default function ReportPage() {
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: "auto" }}
                                     exit={{ opacity: 0, height: 0 }}
-                                    className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-4 rounded-r-lg"
+                                    className={`
+                                        border-l-4 p-4 rounded-r-lg
+                                        ${selectedSegment.type === "highlight_good"
+                                            ? "bg-green-50 dark:bg-green-950/20 border-green-500"
+                                            : "bg-red-50 dark:bg-red-950/20 border-red-500"}
+                                    `}
                                 >
                                     <div className="flex items-start gap-3">
-                                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                                        {selectedSegment.type === "highlight_good" ? (
+                                            <Heart className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                                        ) : (
+                                            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                                        )}
+
                                         <div>
-                                            <p className="font-bold text-red-800 dark:text-red-200 mb-1">
-                                                问题诊断：&quot;{selectedSegment.text}&quot;
+                                            <p className={`font-bold mb-1 ${selectedSegment.type === "highlight_good"
+                                                    ? "text-green-800 dark:text-green-200"
+                                                    : "text-red-800 dark:text-red-200"
+                                                }`}>
+                                                {selectedSegment.type === "highlight_good" ? "✨ 亮点分析：" : "💡 问题诊断："}
+                                                &quot;{selectedSegment.text}&quot;
                                             </p>
-                                            <p className="text-red-700 dark:text-red-300 text-sm">
+                                            <p className={`text-sm ${selectedSegment.type === "highlight_good"
+                                                    ? "text-green-700 dark:text-green-300"
+                                                    : "text-red-700 dark:text-red-300"
+                                                }`}>
                                                 {selectedSegment.comment}
                                             </p>
                                         </div>
@@ -219,6 +246,6 @@ export default function ReportPage() {
                     </p>
                 </div>
             </motion.div>
-        </main>
+        </main >
     );
 }
