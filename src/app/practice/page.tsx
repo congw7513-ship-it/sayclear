@@ -16,7 +16,8 @@ import {
     Loader2,
     Lightbulb,
     CheckCircle2,
-    MicOff
+    MicOff,
+    RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -30,13 +31,93 @@ import { AnalyzeResponse } from "@/types/analysis";
 // ============================================
 type PracticeState = "idle" | "thinking" | "recording" | "analyzing";
 
-// PREP 提示框架
-const PREP_HINTS = [
-    { letter: "P", title: "Point", desc: "先说结论" },
-    { letter: "R", title: "Reason", desc: "解释原因" },
-    { letter: "E", title: "Example", desc: "举例证明" },
-    { letter: "P", title: "Point", desc: "重申结论" },
+// NVC (非暴力沟通) 提示框架 - 仅在后台分析时使用，不再显示给用户
+const NVC_HINTS = [
+    { letter: "O", title: "Observation", desc: "描述事实" },
+    { letter: "F", title: "Feeling", desc: "表达感受" },
+    { letter: "N", title: "Need", desc: "说出需求" },
+    { letter: "R", title: "Request", desc: "提出请求" },
 ];
+
+// 场景配置 - 情绪翻译官定位
+type ScenarioMode = "work" | "relationship";
+
+
+// 场景数据结构
+interface Scenario {
+    title: string;
+    subtitle: string;
+    placeholder: string;
+    buttonText: string;
+}
+
+// 场景池配置
+const SCENARIO_POOLS: Record<ScenarioMode, Scenario[]> = {
+    work: [
+        {
+            title: "职场嘴替：把不满变成专业",
+            subtitle: "现在的场景：\n临下班 5 分钟，甲方突然发来第 10 版修改意见，\n推翻了核心逻辑，还轻飘飘地说“很简单，今晚改完再走”。\n（无需客气，在这里把想怼的话都说出来）",
+            placeholder: "例如：这个需求改了800遍了，你们到底懂不懂产品？（尽管吐槽）",
+            buttonText: "按住吐槽"
+        },
+        {
+            title: "拒绝背锅：优雅回击甩锅行为",
+            subtitle: "现在的场景：\n明明是第三方接口挂了导致项目延期，\n周会上同事却暗示是你跟进不到位，老板的脸色已经沉下来了。\n（别忍着，把事情的真相和委屈说出来）",
+            placeholder: "例如：明明是他们的问题，凭什么赖我头上？我每天催进度记录都有！",
+            buttonText: "按住反击"
+        },
+        {
+            title: "拒绝白嫖：拒绝不合理的加班",
+            subtitle: "现在的场景：\n隔壁部门的领导笑嘻嘻地过来说“就帮我看一眼，很快的”，\n结果直接想把整个模块甩给你负责，还没有任何排期。\n（不用给面子，直接表达你的拒绝）",
+            placeholder: "例如：我也很忙好吗？这种大活怎么可能顺手就做了？",
+            buttonText: "按住拒绝"
+        },
+        {
+            title: "应对微管理：反击窒息式控制",
+            subtitle: "现在的场景：\n老板每隔 10 分钟就问一次“进度怎么样”，\n甚至连你邮件的标点符号都要逐字修改，你感觉完全被束缚了。\n（深呼吸，把这种窒息感说出来）",
+            placeholder: "例如：你能不能别一直盯着我？我是来工作的，不是来当打字员的！",
+            buttonText: "按住吐槽"
+        },
+        {
+            title: "被抢功劳：夺回属于你的光芒",
+            subtitle: "现在的场景：\n整个方案都是你熬夜做的，\n结果今天的汇报会上，同事拿着你的PPT侃侃而谈，老板还夸他做得好。\n（太气人了，把你的愤怒大声说出来）",
+            placeholder: "例如：那都是我一个字一个字写的！他怎么好意思说是他的？",
+            buttonText: "按住吐槽"
+        }
+    ],
+    relationship: [
+        {
+            title: "把你的委屈/愤怒发泄出来",
+            subtitle: "现在的场景：\nTA 下班回家就瘫在沙发上刷视频，对你的话爱搭不理。\n你忙前忙后做了一桌菜，让他洗个手吃饭都要催三遍。\n（无需压抑，在这里把火气都发泄出来）",
+            placeholder: "例如：你烦不烦啊？每天回家就玩手机，当我是保姆吗？（直接说大实话！）",
+            buttonText: "按住倾诉"
+        },
+        {
+            title: "拒绝家务失衡：我不是保姆",
+            subtitle: "现在的场景：\n约定好轮流做家务，这周已经是你连续第 5 天洗碗了。\nTA 吃完饭推开碗筷就去打游戏，完全没有要动的意思。\n（别惯着，把你的不满发泄出来）",
+            placeholder: "例如：凭什么每次都是我收拾？你手断了吗？",
+            buttonText: "按住倾诉"
+        },
+        {
+            title: "打破冷暴力：拒绝沉默",
+            subtitle: "现在的场景：\n昨天吵架后 TA 就一直冷暴力，\n把家里当旅馆，问什么都不说话，把你当透明人。\n（这种感觉太糟糕了，把你的绝望喊出来）",
+            placeholder: "例如：你要冷战到什么时候？这日子还过不过了？",
+            buttonText: "按住倾诉"
+        },
+        {
+            title: "对抗双重标准：我要公平",
+            subtitle: "现在的场景：\nTA 可以和朋友聚会喝到半夜，\n你只是稍微晚回一点就被夺命连环 Call，这种不信任让你窒息。\n（把这种不公平的感受说出来）",
+            placeholder: "例如：只许州官放火是吧？你自己玩到几点心里没数吗？",
+            buttonText: "按住倾诉"
+        },
+        {
+            title: "纪念日被遗忘：失望透顶",
+            subtitle: "现在的场景：\n今天是结婚纪念日，你精心准备了礼物，\nTA 却空手回家，还一脸懵地问你“今天吃什么”，仿佛完全忘了这回事。\n（心凉了半截，把这份失望说出来）",
+            placeholder: "例如：你根本就不在乎我对不对？连这种日子都能忘！",
+            buttonText: "按住倾诉"
+        }
+    ]
+};
 
 // ============================================
 // 动态波形可视化组件（带真实反馈）
@@ -148,11 +229,40 @@ function CountdownDisplay({ seconds, label }: { seconds: number; label: string }
 function PracticeContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const topicType = (searchParams.get("topic") as "workplace" | "interview") || "workplace";
+    const mode = (searchParams.get("mode") as ScenarioMode) || "work";
+
+    // 初始化场景（默认第一个）
+    const [currentScenario, setCurrentScenario] = useState<Scenario>(SCENARIO_POOLS[mode][0]);
+
+    // 客户端随机抽取场景
+    useEffect(() => {
+        // 随机选择一个场景（排除当前正在展示的，除非只有一个）
+        const pool = SCENARIO_POOLS[mode];
+        if (pool.length > 1) {
+            const randomIndex = Math.floor(Math.random() * pool.length);
+            setCurrentScenario(pool[randomIndex]);
+        } else {
+            setCurrentScenario(pool[0]);
+        }
+    }, [mode]);
+
+    // 刷新场景
+    const handleRefreshScenario = () => {
+        const pool = SCENARIO_POOLS[mode];
+        let nextIndex;
+        // 简单随机，如果跟当前一样就重选（尽力而为）
+        let attempts = 0;
+        do {
+            nextIndex = Math.floor(Math.random() * pool.length);
+            attempts++;
+        } while (pool[nextIndex].title === currentScenario.title && attempts < 3);
+
+        setCurrentScenario(pool[nextIndex]);
+        toast.success("已切换新场景", { duration: 1500 });
+    };
 
     // 状态管理
     const [state, setState] = useState<PracticeState>("idle");
-    const [topic, setTopic] = useState(() => getRandomTopic(topicType));
     const [countdown, setCountdown] = useState(30);
     const [permissionDenied, setPermissionDenied] = useState(false);
 
@@ -166,6 +276,7 @@ function PracticeContent() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognitionRef = useRef<any>(null); // Web Speech API 实例
     const fullTranscriptRef = useRef(""); // 累积的完整识别文本
+    const startTimeRef = useRef<number>(0); // 录音开始时间戳
 
     // 清理录音资源
     const cleanupRecording = useCallback(() => {
@@ -200,6 +311,7 @@ function PracticeContent() {
             streamRef.current = stream;
             audioChunksRef.current = [];
             fullTranscriptRef.current = ""; // 重置累积文本
+            startTimeRef.current = Date.now(); // 记录录音开始时间
 
             // 使用 webm 格式（兼容性好）
             const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -379,35 +491,40 @@ function PracticeContent() {
 
     // 提交分析
     const handleSubmit = useCallback(async () => {
+        // ============================================
+        // Guardrail 1: 前端时长检查 (至少 2 秒)
+        // ============================================
+        const recordingDuration = Date.now() - startTimeRef.current;
+        if (recordingDuration < 2000) {
+            toast.warning("说话时间太短啦，请至少说 2 秒哦！");
+            setState("idle");
+            cleanupRecording();
+            return;
+        }
+
         setState("analyzing");
 
         try {
             let formData: FormData | null = null;
             let jsonBody: string | null = null;
 
-            // 尝试获取录音
-            const audioBlob = await stopRecording();
+            // 停止录音清理状态 (不再上传音频文件，直接用实时转写的文本)
+            await stopRecording();
 
-            if (audioBlob && audioBlob.size > 0) {
-                // 有录音：使用 FormData 上传 (优先，Whisper 准确率高)
-                console.log(`[提交] 使用音频上传模式 (大小: ${audioBlob.size} bytes)`);
-                formData = new FormData();
-                formData.append("file", audioBlob, "recording.webm");
-            } else if (fullTranscriptRef.current && fullTranscriptRef.current.length > 5) {
-                // 无录音，但有实时识别的文本：作为容灾备份
-                console.warn("[提交] 录音无效，切换到 Web Speech API 文本备份");
-                console.log("[提交] 备份文本:", fullTranscriptRef.current);
-                jsonBody = JSON.stringify({ text: fullTranscriptRef.current });
+            if (fullTranscriptRef.current && fullTranscriptRef.current.trim().length > 1) {
+                // 优先使用 Web Speech API 的实时转写结果
+                console.log("[提交] 使用 Web Speech API 文本提交");
+                console.log("[提交] 文本内容:", fullTranscriptRef.current);
 
-                toast.warning("麦克风音频获取失败，已切换至文字分析", {
-                    description: "本次分析基于实时识别的文字，准确度可能略受影响。",
-                    duration: 4000
+                jsonBody = JSON.stringify({
+                    text: fullTranscriptRef.current,
+                    mode
                 });
             } else {
-                // 万策尽
-                console.warn("[提交] 录音数据原本和备份文本均为空");
+                // 如果文字也为空
+                console.warn("[提交] 录音转写文本为空");
                 toast.error("未检测到有效输入", {
-                    description: "请检查麦克风权限或大声说话。",
+                    description: "似乎没有识别到任何说话内容，请大声一点哦。",
                 });
                 setState("recording");
                 return;
@@ -415,13 +532,8 @@ function PracticeContent() {
 
             const response = await fetch("/api/analyze", {
                 method: "POST",
-                ...(formData
-                    ? { body: formData }
-                    : {
-                        headers: { "Content-Type": "application/json" },
-                        body: jsonBody
-                    }
-                ),
+                headers: { "Content-Type": "application/json" },
+                body: jsonBody
             });
 
             const data: AnalyzeResponse = await response.json();
@@ -443,17 +555,25 @@ function PracticeContent() {
 
         } catch (error) {
             console.error("[提交] 错误:", error);
-            toast.error("分析失败", {
-                description: error instanceof Error ? error.message : "请稍后重试",
-            });
-            setState("recording");
-        }
-    }, [router, stopRecording]);
 
-    // 换一道题
-    const handleNewTopic = () => {
-        setTopic(getRandomTopic(topicType));
-    };
+            // ============================================
+            // Guardrail 3: 处理后端返回的 TOO_SHORT 错误
+            // ============================================
+            const errorMessage = error instanceof Error ? error.message : "";
+            if (errorMessage.includes("TOO_SHORT") || errorMessage.includes("内容太少")) {
+                toast.warning("听不太清，或者内容太短了，请再试一次吧！");
+            } else {
+                toast.error("分析失败", {
+                    description: errorMessage || "请稍后重试",
+                });
+            }
+            setState("idle");
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [router, stopRecording, cleanupRecording]);
+
+    // 换一道题 (已废弃，现在使用场景模式)
+    // const handleNewTopic = () => {};
 
     // 计算进度百分比
     const getProgress = () => {
@@ -483,29 +603,44 @@ function PracticeContent() {
                                 MOCK
                             </Badge>
                         )}
-                        <Badge variant="outline">
-                            {topicType === "workplace" ? "工作汇报" : "面试回答"}
-                        </Badge>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="w-fit">
+                                    {currentScenario.title}
+                                </Badge>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                    onClick={handleRefreshScenario}
+                                    title="换一个场景"
+                                >
+                                    <RefreshCw className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* 主卡片 */}
                 <Card className="overflow-hidden">
                     {/* ============================================ */}
-                    {/* 常驻区域：题目显示 */}
+                    {/* 常驻区域：场景引导 */}
                     {/* ============================================ */}
                     <CardHeader className="text-center pb-2 border-b bg-muted/20">
                         <Badge variant="secondary" className="w-fit mx-auto mb-4">
-                            题目 #{topic.id}
+                            {mode === "work" ? "职场" : "亲密关系"}
                         </Badge>
-                        <CardTitle className="text-2xl md:text-3xl mb-2">{topic.title}</CardTitle>
+                        <CardTitle className="text-2xl md:text-3xl mb-2">{currentScenario.title}</CardTitle>
                     </CardHeader>
 
                     <CardContent className="pt-6 space-y-6">
-                        {/* 题目描述 */}
+                        {/* 场景描述 */}
                         <div className="bg-muted p-4 md:p-6 rounded-lg">
-                            <p className="text-lg text-center leading-relaxed">
-                                {topic.prompt}
+                            <p className="text-lg text-center leading-relaxed whitespace-pre-line">
+                                <p className="text-lg text-center leading-relaxed whitespace-pre-line">
+                                    {currentScenario.subtitle}
+                                </p>
                             </p>
                         </div>
 
@@ -525,18 +660,10 @@ function PracticeContent() {
                                     <Button
                                         size="lg"
                                         className="w-full text-lg h-14"
-                                        onClick={handleStartThinking}
+                                        onClick={handleSkipToRecording}
                                     >
-                                        <Brain className="mr-2 w-5 h-5" />
-                                        开始思考（30秒）
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="lg"
-                                        className="w-full"
-                                        onClick={handleNewTopic}
-                                    >
-                                        换一道题
+                                        <Mic className="mr-2 w-5 h-5" />
+                                        {currentScenario.buttonText}
                                     </Button>
                                 </motion.div>
                             )}
@@ -558,14 +685,14 @@ function PracticeContent() {
                                             <Brain className="w-6 h-6 animate-pulse" />
                                             <span className="font-medium">思考时间</span>
                                         </div>
-                                        <CountdownDisplay seconds={countdown} label="用 PREP 框架组织你的思路" />
+                                        <CountdownDisplay seconds={countdown} label="整理一下思绪..." />
                                     </div>
                                     <div className="space-y-6">
                                         <Progress value={getProgress()} className="h-2" />
 
-                                        {/* PREP 提示卡片 */}
-                                        <div className="grid grid-cols-4 gap-2">
-                                            {PREP_HINTS.map((hint, i) => (
+                                        {/* NVC 提示卡片 (已隐藏) */}
+                                        {/* <div className="grid grid-cols-4 gap-2">
+                                            {NVC_HINTS.map((hint: { letter: string; desc: string }, i: number) => (
                                                 <motion.div
                                                     key={i}
                                                     initial={{ opacity: 0, y: 10 }}
@@ -577,13 +704,13 @@ function PracticeContent() {
                                                     <div className="text-xs text-muted-foreground">{hint.desc}</div>
                                                 </motion.div>
                                             ))}
-                                        </div>
+                                        </div> */}
 
                                         <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
                                             <div className="flex items-start gap-2">
                                                 <Lightbulb className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                                                 <p className="text-sm text-amber-800 dark:text-amber-200">
-                                                    <strong>提示：</strong>先想好你的核心结论是什么，然后准备1-2个具体数据或例子来支撑。
+                                                    <strong>提示：</strong>做最真实的自己，不需要任何伪装。
                                                 </p>
                                             </div>
                                         </div>
@@ -593,7 +720,7 @@ function PracticeContent() {
                                             className="w-full"
                                             onClick={handleSkipToRecording}
                                         >
-                                            准备好了，开始录音
+                                            {currentScenario.buttonText}
                                         </Button>
                                     </div>
                                 </motion.div>
@@ -625,7 +752,7 @@ function PracticeContent() {
                                                 </>
                                             )}
                                         </div>
-                                        <CountdownDisplay seconds={countdown} label="尽量覆盖 PREP 的每个环节" />
+                                        <CountdownDisplay seconds={countdown} label="尽情表达你的感受" />
                                     </div>
                                     <div className="space-y-6">
                                         <Progress value={getProgress()} className="h-2" />
@@ -661,14 +788,14 @@ function PracticeContent() {
                                             )}
                                         </div>
 
-                                        {/* PREP 提醒 */}
-                                        <div className="grid grid-cols-4 gap-1 text-center text-xs text-muted-foreground">
-                                            {PREP_HINTS.map((hint, i) => (
+                                        {/* NVC 提醒 (已隐藏) */}
+                                        {/* <div className="grid grid-cols-4 gap-1 text-center text-xs text-muted-foreground">
+                                            {NVC_HINTS.map((hint: { letter: string; desc: string }, i: number) => (
                                                 <div key={i} className="p-2">
                                                     <span className="font-bold text-primary">{hint.letter}</span> {hint.desc}
                                                 </div>
                                             ))}
-                                        </div>
+                                        </div> */}
 
                                         <Button
                                             variant="destructive"
@@ -696,20 +823,16 @@ function PracticeContent() {
                                     className="py-8"
                                 >
                                     <div className="text-center">
-                                        <motion.div
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                            className="mx-auto mb-6"
-                                        >
-                                            <Loader2 className="w-16 h-16 text-primary" />
-                                        </motion.div>
-                                        <CardTitle className="text-2xl">AI 正在分析逻辑...</CardTitle>
+                                        <div className="flex justify-center mb-6">
+                                            <Loader2 className="w-16 h-16 text-primary animate-spin" />
+                                        </div>
+                                        <CardTitle className="text-2xl">AI 正在深度共情...</CardTitle>
                                     </div>
                                     <p className="text-muted-foreground animate-pulse text-center mt-4">
-                                        正在分析您的表达逻辑...
+                                        正在用心聆听，为您转化高情商表达...
                                     </p>
                                     <div className="space-y-4 max-w-xs mx-auto mt-8">
-                                        {["语音转文字", "识别 PREP 结构", "逻辑评分", "生成建议"].map((step, i) => (
+                                        {["语音转文字", "捕捉情绪", "高情商转化", "生成建议"].map((step, i) => (
                                             <motion.div
                                                 key={step}
                                                 initial={{ opacity: 0, x: -20 }}

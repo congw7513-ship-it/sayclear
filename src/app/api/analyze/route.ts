@@ -14,68 +14,80 @@ const MINIMAX_MODEL = "MiniMax-Text-01";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const GROQ_WHISPER_MODEL = "whisper-large-v3";
 
-// System Prompt for Logic Master
-const SYSTEM_PROMPT = `# Role
-You are "Logic Master," a senior communication coach specializing in workplace reporting. Your goal is to analyze the user's spoken transcript (which may contain minor STT errors) and provide a rigorous critique based strictly on logical structure and efficiency. You do not care about politeness; you care about clarity and impact.
-
-# Context
-The user is practicing a "Workplace Report" (e.g., status update, proposal). The ideal structure is the **PREP model**:
-1. **Point (P)**: State the conclusion immediately.
-2. **Reason (R)**: Explain why.
-3. **Example/Evidence (E)**: Provide data, cases, or facts.
-4. **Point (P)**: Reiterate the conclusion or call to action.
+// System Prompt Generator for EQ Coach (Emotional Translator)
+function getSystemPrompt(mode: "work" | "relationship") {
+    return `
+You are an expert Communication Coach and "Emotional Translator". Your goal is to transform the user's aggressive, emotional, or low-EQ speech into a high-EQ, constructive version based on Non-Violent Communication (NVC).
 
 # Task
-Analyze the user's input text following these steps:
+Analyze the input for aggression, blame, and lack of empathy.
 
-1. **Pre-processing**: 
-   - Ignore minor homophone errors caused by speech-to-text (STT) unless they make the sentence unintelligible.
-   - Remove filler words (e.g., "um," "ah," "like," "you know") from your logical analysis but count them for the "Efficiency" score.
+1. **Scoring (0-100)**:
+   - **safety**: Non-aggression check. (Low if blaming/attacking)
+   - **empathy**: Does it consider the other person?
+   - **nvc_score**: Clarity of Needs/Requests. (High if follows NVC)
 
-2. **Structural Analysis (PREP Detection)**:
-   - Did the user start with the Conclusion (Point)?
-   - Is there a logical link between the Reason and the Point?
-   - Is the Evidence specific (numbers, facts) or vague?
+2. **Diagnosis**:
+   - Provide a brief, sharp "diagnosis" of why the original speech is hurtful or ineffective (IN CHINESE).
 
-3. **Scoring (0-100)**:
-   - **Logic Score**: How strong is the argument? (Deduct points for logical fallacies, circular reasoning, or missing evidence).
-   - **Structure Score**: How well does it fit PREP? (Deduct points heavily if the conclusion is buried at the end).
-   - **Efficiency Score**: 100 minus the percentage of fluff/filler words and repetitive sentences.
+3. **High-EQ Rewrite (Critical)**:
+   - Provide a "better_version" that rewrites the user's intent using NVC (Observation -> Feeling -> Need -> Request).
+   - This MUST be the first item in the suggestions list.
 
-4. **Feedback Generation**:
-   - Provide a "One-Sentence Diagnosis" (The most critical issue).
-   - Identify specific segments in the text to highlight as "Good" (Green) or "Bad" (Red).
+# Few-Shot Examples
 
-# Constraints
-- Be objective and critical. Do not give false praise.
-- If the input is too short (under 10 words) or nonsensical, return an error status.
-- Output strictly in JSON format.
-- IMPORTANT: Respond in Chinese (Simplified) for all text fields.
+Case 1 (Work):
+Input: "这个需求改了800遍了，你们到底懂不懂产品？"
+Output JSON:
+{
+  "scores": { "safety": 15, "empathy": 20, "nvc_score": 90 },
+  "diagnosis": "攻击性过强，质疑对方专业能力会导致沟通彻底破裂。",
+  "advice": [
+    "高情商重写版本：关于这个功能，我注意到需求已经变更了多次。我担心这会影响交付质量。我们需要先确认最终标准，再继续开发，好吗？",
+    "避免使用反问句，这通常带有攻击性。",
+    "试着表达你的担忧（质量/进度），而不是指责对方的能力。"
+  ],
+  "prep_analysis": { "point_detected": true, "conclusion_position": "middle" },
+  "segments": []
+}
+
+Case 2 (Relationship):
+Input: "你烦不烦啊？每天回家就玩手机，当我是保姆吗？"
+Output JSON:
+{
+  "scores": { "safety": 10, "empathy": 10, "nvc_score": 60 },
+  "diagnosis": "使用了反问和讽刺，这会让对方立刻进入防御模式，引发争吵。",
+  "advice": [
+    "高情商重写版本：亲爱的，看到你回家一直在看手机，我觉得有点失落和疲惫。我希望我们能多一点互动，或者一起分担家务，这样我会感觉更好。",
+    "将'你烦不烦'改为'我感到失落'，使用'我'字句表达感受。",
+    "明确提出你希望对方怎么做（互动/分担家务），而不是只有指责。"
+  ],
+  "prep_analysis": { "point_detected": true, "conclusion_position": "end" },
+  "segments": [
+    { "text": "烦不烦", "type": "highlight_bad", "comment": "反问句带有强烈的不耐烦，容易激化矛盾" },
+    { "text": "保姆", "type": "highlight_bad", "comment": "夸张的比喻（保姆）扭曲了对方的意图，属于一种攻击" }
+  ]
+}
+
+# Current Context
+Input Mode: \${mode} (Adjust tone based on '\${mode}')
 
 # Output JSON Format
+Strictly return JSON matching this structure:
 {
-  "scores": {
-    "logic": <int>,
-    "structure": <int>,
-    "efficiency": <int>
-  },
-  "diagnosis": "<string: A punchy, 1-sentence summary of the main problem IN CHINESE>",
-  "prep_analysis": {
-    "point_detected": <boolean>,
-    "conclusion_position": "<string: 'start', 'middle', 'end', or 'missing'>"
-  },
-  "advice": [
-    "<string: Specific actionable advice 1 IN CHINESE>",
-    "<string: Specific actionable advice 2 IN CHINESE>"
-  ],
-  "segments": [
-    {
-      "text": "<string: excerpt from user text>",
-      "type": "<string: 'highlight_good' or 'highlight_bad'>",
-      "comment": "<string: specific critique for this segment IN CHINESE>"
-    }
-  ]
-}`;
+  "scores": { "empathy": <int>, "nvc_score": <int>, "safety": <int> },
+  "diagnosis": "<string>",
+  "prep_analysis": { "point_detected": <bool>, "conclusion_position": "start/middle/end/missing" },
+  "advice": [ "<better_version_rewrite>", "<tip1>", "<tip2>" ],
+  "segments": [ { "text": "<exact_substring_match>", "type": "highlight_bad", "comment": "<short_reason>" } ]
+}
+IMPORTANT:
+- In 'segments', ONLY identify specific PHRASES (1-5 words) that are aggressive, blaming, or absolutist (e.g., "总是", "从不", "烦不烦").
+- The 'text' field MUST be an EXACT SUBSTRING of the input string data.
+- Do NOT rewrite the text in 'segments', just quote it.
+}
+`;
+}
 
 // 使用 Groq Whisper API 进行语音转文字
 // ============================================
@@ -83,7 +95,7 @@ async function transcribeAudioWithGroq(
     audioFile: File
 ): Promise<string> {
     console.log("🎤 [STT] 开始语音转文字 (Groq Whisper)...");
-    console.log(`🎤 [STT] 文件: ${audioFile.name}, 大小: ${audioFile.size} bytes, 类型: ${audioFile.type}`);
+    console.log(`🎤[STT] 文件: ${audioFile.name}, 大小: ${audioFile.size} bytes, 类型: ${audioFile.type} `);
 
     const groqApiKey = process.env.GROQ_API_KEY;
     if (!groqApiKey) {
@@ -98,7 +110,7 @@ async function transcribeAudioWithGroq(
     const response = await fetch(GROQ_API_URL, {
         method: "POST",
         headers: {
-            "Authorization": `Bearer ${groqApiKey}`,
+            "Authorization": `Bearer ${groqApiKey} `,
         },
         body: formData,
     });
@@ -106,7 +118,7 @@ async function transcribeAudioWithGroq(
     if (!response.ok) {
         const errorText = await response.text();
         console.error("🎤 [STT] ❌ Groq 转录失败:", errorText);
-        throw new Error(`Groq STT 错误: ${response.status} - ${errorText}`);
+        throw new Error(`Groq STT 错误: ${response.status} - ${errorText} `);
     }
 
     const data = await response.json();
@@ -119,25 +131,30 @@ async function transcribeAudioWithGroq(
 }
 
 // ============================================
-// 使用 MiniMax 进行逻辑分析
+// 使用 MiniMax 进行情商分析
 // ============================================
 async function analyzeWithMiniMax(
     text: string,
-    apiKey: string
+    apiKey: string,
+    mode: "work" | "relationship" = "work"
 ): Promise<AnalysisResult> {
-    console.log("🧠 [LLM] 开始逻辑分析...");
+    console.log("🧠 [LLM] 开始情商分析...");
+    console.log("🧠 [LLM] 场景模式:", mode);
     console.log("🧠 [LLM] 输入文本:", text.substring(0, 200) + (text.length > 200 ? "..." : ""));
+
+    // 构建动态 Prompt：使用新的 System Prompt 生成器
+    const dynamicPrompt = getSystemPrompt(mode);
 
     const response = await fetch(MINIMAX_API_URL, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey} `,
         },
         body: JSON.stringify({
             model: MINIMAX_MODEL,
             messages: [
-                { role: "system", content: SYSTEM_PROMPT },
+                { role: "system", content: dynamicPrompt },
                 { role: "user", content: text },
             ],
             temperature: 0.7,
@@ -147,7 +164,7 @@ async function analyzeWithMiniMax(
     if (!response.ok) {
         const errorText = await response.text();
         console.error("🧠 [LLM] ❌ 分析失败:", errorText);
-        throw new Error(`LLM 错误: ${response.status} - ${errorText}`);
+        throw new Error(`LLM 错误: ${response.status} - ${errorText} `);
     }
 
     const data = await response.json();
@@ -160,10 +177,13 @@ async function analyzeWithMiniMax(
     console.log("🧠 [LLM] 原始响应:", content.substring(0, 300) + "...");
 
     // 尝试从内容中提取 JSON（处理可能的 markdown 代码块）
+    // 尝试从内容中提取 JSON（更稳健的方式：寻找首尾大括号）
     let jsonContent = content;
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-        jsonContent = jsonMatch[1].trim();
+    const startIndex = content.indexOf("{");
+    const endIndex = content.lastIndexOf("}");
+
+    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+        jsonContent = content.substring(startIndex, endIndex + 1);
     }
 
     const analysisResult: AnalysisResult = JSON.parse(jsonContent);
@@ -197,10 +217,11 @@ export async function POST(request: NextRequest) {
         console.log("🚀 [REAL MODE] 进入真实处理流程");
 
         // ============================================
-        // Step 2: 解析请求，获取文本内容
+        // Step 2: 解析请求，获取文本内容和场景模式
         // ============================================
         const contentType = request.headers.get("content-type") || "";
         let textToAnalyze: string = "";
+        let mode: "work" | "relationship" = "work"; // 默认场景
 
         // ------------------------------------------
         // 情况 A: FormData (音频文件上传)
@@ -212,7 +233,7 @@ export async function POST(request: NextRequest) {
             const audioFile = formData.get("file") as File | null;
 
             if (audioFile && audioFile.size > 0) {
-                console.log(`🎵 [API] 检测到音频文件: ${audioFile.name} (${audioFile.size} bytes)`);
+                console.log(`🎵[API] 检测到音频文件: ${audioFile.name} (${audioFile.size} bytes)`);
 
                 // 🔑 关键步骤: 调用 Groq Whisper 将音频转为文字
                 textToAnalyze = await transcribeAudioWithGroq(audioFile);
@@ -225,6 +246,13 @@ export async function POST(request: NextRequest) {
                     console.log("📝 [API] FormData 中找到文本输入");
                 }
             }
+
+            // 读取场景模式
+            const modeInput = formData.get("mode") as string | null;
+            if (modeInput === "work" || modeInput === "relationship") {
+                mode = modeInput;
+            }
+            console.log("🎯 [API] 场景模式:", mode);
         }
         // ------------------------------------------
         // 情况 B: JSON (文本输入)
@@ -233,6 +261,12 @@ export async function POST(request: NextRequest) {
             console.log("📝 [API] 接收到 JSON (文本输入)");
             const body = await request.json();
             textToAnalyze = body.text || "";
+
+            // 读取场景模式
+            if (body.mode === "work" || body.mode === "relationship") {
+                mode = body.mode;
+            }
+            console.log("🎯 [API] 场景模式:", mode);
         }
         // ------------------------------------------
         // 情况 C: 不支持的格式
@@ -240,13 +274,13 @@ export async function POST(request: NextRequest) {
         else {
             console.error("❌ [API] 不支持的 Content-Type:", contentType);
             return NextResponse.json<AnalyzeResponse>(
-                { success: false, error: `不支持的请求格式: ${contentType}` },
+                { success: false, error: `不支持的请求格式: ${contentType} ` },
                 { status: 400 }
             );
         }
 
         // ============================================
-        // Step 3: 验证输入文本
+        // Guardrail 2: 后端内容长度检查 (至少 5 个字符)
         // ============================================
         if (!textToAnalyze || textToAnalyze.trim().length === 0) {
             console.error("❌ [API] 没有可分析的文本");
@@ -256,10 +290,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (textToAnalyze.trim().length < 10) {
-            console.error("❌ [API] 文本太短:", textToAnalyze);
+        if (textToAnalyze.trim().length < 5) {
+            console.warn(`[Guardrail] 拦截到无效录音: "${textToAnalyze}"`);
             return NextResponse.json<AnalyzeResponse>(
-                { success: false, error: "录音内容太短（少于10个字），请录制更长的内容" },
+                { success: false, error: "TOO_SHORT: 内容太少，无法分析逻辑" },
                 { status: 400 }
             );
         }
@@ -278,8 +312,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 🔑 关键步骤: 用 STT 转录的文本（或用户输入的文本）进行分析
-        const analysisResult = await analyzeWithMiniMax(textToAnalyze, llmApiKey);
+        // 🔑 关键步骤: 用 STT 转录的文本（或用户输入的文本）进行情商分析
+        const analysisResult = await analyzeWithMiniMax(textToAnalyze, llmApiKey, mode);
+
+        // 注入原始转录文本，供前端高亮显示
+        analysisResult.original_transcript = textToAnalyze;
 
         console.log("✅ [API] 分析完成，返回结果");
         console.log("=".repeat(50) + "\n");

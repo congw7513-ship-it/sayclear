@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Users, ArrowRight } from "lucide-react";
+import { Heart, MessageSquare, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -17,13 +17,13 @@ export default function HomePage() {
         className="text-center mb-12"
       >
         <Badge variant="secondary" className="mb-4">
-          Logic Master MVP
+          EQ Coach
         </Badge>
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
-          提升你的表达逻辑
+          学会好好说话
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-md mx-auto">
-          录制你的演讲，获得 AI 驱动的 PREP 结构分析反馈
+          录制你的表达，AI 帮你重写成高情商版本
         </p>
       </motion.div>
 
@@ -33,16 +33,16 @@ export default function HomePage() {
         transition={{ duration: 0.6, delay: 0.2 }}
         className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl w-full"
       >
-        {/* 工作汇报卡片 */}
-        <Link href="/practice?topic=workplace" className="block">
+        {/* 职场沟通卡片 */}
+        <Link href="/practice?mode=work" className="block">
           <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]">
             <CardHeader>
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                <Briefcase className="w-6 h-6 text-primary" />
+                <MessageSquare className="w-6 h-6 text-primary" />
               </div>
-              <CardTitle>工作汇报</CardTitle>
+              <CardTitle>职场沟通</CardTitle>
               <CardDescription>
-                练习项目进度、工作成果的结构化汇报
+                练习工作反馈、请求协作、表达不满
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -54,16 +54,16 @@ export default function HomePage() {
           </Card>
         </Link>
 
-        {/* 面试回答卡片 */}
-        <Link href="/practice?topic=interview" className="block">
+        {/* 亲密关系卡片 */}
+        <Link href="/practice?mode=relationship" className="block">
           <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02]">
             <CardHeader>
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                <Users className="w-6 h-6 text-primary" />
+                <Heart className="w-6 h-6 text-primary" />
               </div>
-              <CardTitle>面试回答</CardTitle>
+              <CardTitle>亲密关系</CardTitle>
               <CardDescription>
-                练习行为面试、自我介绍等场景的表达
+                练习和伴侣、家人、朋友的沟通表达
               </CardDescription>
             </CardHeader>
             <CardContent>

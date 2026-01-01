@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 // import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, RotateCcw, TrendingUp, Layers, Zap, AlertCircle } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, RotateCcw, Heart, MessageCircle, Shield, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { AnalysisResult } from "@/types/analysis";
+import { AnalysisResult, Segment } from "@/types/analysis";
 import { MOCK_ANALYSIS_RESULT } from "@/lib/mock-data";
 
 // 根据分数获取颜色
@@ -29,6 +29,7 @@ function getProgressColor(score: number): string {
 export default function ReportPage() {
     const [result, setResult] = useState<AnalysisResult | null>(null);
     const [loading, setLoading] = useState(true);
+    const [selectedSegment, setSelectedSegment] = useState<Segment | null>(null);
 
     useEffect(() => {
         // 使用 setTimeout 避免在 effect 中同步 setState (Linter 警告)
@@ -78,210 +79,158 @@ export default function ReportPage() {
         );
     }
 
-    const { scores, diagnosis, prep_analysis, advice, segments } = result;
-    const avgScore = Math.round((scores.logic + scores.structure + scores.efficiency) / 3);
+    const { scores, diagnosis, advice, segments, original_transcript } = result;
+    const avgScore = Math.round((scores.empathy + scores.nvc_score + scores.safety) / 3);
+
+
+
+    // 高亮渲染逻辑
+    const renderHighlightedText = () => {
+        const text = original_transcript || "（未获取到原始文本，但我们仍为您分析了表达片段）";
+
+        // 如果没有需要高亮的片段，直接返回文本
+        if (!segments || segments.length === 0) return <p className="text-xl leading-relaxed">{text}</p>;
+
+        const safeSegments = segments.filter(s => s.text && s.text.trim().length > 0);
+        if (safeSegments.length === 0) return <p className="text-xl leading-relaxed">{text}</p>;
+
+        // 构建正则：转义特殊字符
+        const patternString = safeSegments
+            .map(s => s.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+            .join("|");
+
+        const pattern = new RegExp(`(${patternString})`, "g");
+        const parts = text.split(pattern);
+
+        return (
+            <p className="text-xl leading-relaxed font-medium">
+                {parts.map((part, i) => {
+                    const segment = safeSegments.find(s => s.text === part);
+                    if (segment && segment.type === "highlight_bad") {
+                        return (
+                            <span
+                                key={i}
+                                className="text-red-600 dark:text-red-400 border-b-2 border-red-400 dark:border-red-600 cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors px-0.5 rounded-sm"
+                                onClick={() => setSelectedSegment(segment)}
+                            >
+                                {part}
+                            </span>
+                        );
+                    }
+                    return <span key={i}>{part}</span>;
+                })}
+            </p>
+        );
+    };
 
     return (
-        <main className="min-h-screen bg-background p-4 md:p-8">
+        <main className="min-h-screen bg-background p-4 md:p-8 flex flex-col items-center">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="max-w-4xl mx-auto"
+                className="w-full max-w-2xl space-y-8"
             >
                 {/* 顶部导航 */}
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center justify-between">
                     <Link href="/">
                         <Button variant="ghost" size="sm">
                             <ArrowLeft className="mr-2 w-4 h-4" />
                             返回首页
                         </Button>
                     </Link>
-                    <Link href="/practice">
-                        <Button variant="outline" size="sm">
-                            <RotateCcw className="mr-2 w-4 h-4" />
-                            再练一次
-                        </Button>
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground mr-2">综合得分</span>
+                        <Badge variant={avgScore >= 80 ? "default" : "secondary"} className="text-lg px-3 py-1">
+                            {avgScore}
+                        </Badge>
+                    </div>
                 </div>
 
-                {/* 标题和诊断 */}
-                <div className="text-center mb-8">
-                    <Badge variant="secondary" className="mb-4">分析完成</Badge>
-                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">你的表达报告</h1>
-
-                    {/* 综合评分 */}
-                    <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.2, type: "spring" }}
-                        className="inline-flex items-center gap-3 bg-muted px-6 py-3 rounded-full mb-4"
-                    >
-                        <span className="text-muted-foreground">综合评分</span>
-                        <span className={`text-4xl font-bold ${getScoreColor(avgScore)}`}>{avgScore}</span>
-                    </motion.div>
-
-                    {/* 一句话诊断 */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4 }}
-                        className="max-w-xl mx-auto"
-                    >
-                        <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
-                            <CardContent className="py-4">
-                                <p className="text-amber-800 dark:text-amber-200 font-medium">
-                                    💡 {diagnosis}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                </div>
-
-                {/* 分数卡片 */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    {[
-                        { key: "logic", label: "逻辑性", icon: TrendingUp, color: "blue", score: scores.logic },
-                        { key: "structure", label: "结构性", icon: Layers, color: "green", score: scores.structure },
-                        { key: "efficiency", label: "表达效率", icon: Zap, color: "orange", score: scores.efficiency },
-                    ].map((item, i) => (
-                        <motion.div
-                            key={item.key}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 * i }}
-                        >
-                            <Card>
-                                <CardHeader className="pb-2">
-                                    <div className="flex items-center gap-2">
-                                        <item.icon className={`w-5 h-5 text-${item.color}-500`} />
-                                        <CardTitle className="text-lg">{item.label}</CardTitle>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className={`text-3xl font-bold mb-2 ${getScoreColor(item.score)}`}>
-                                        {item.score}
-                                    </div>
-                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${item.score}%` }}
-                                            transition={{ duration: 1, delay: 0.3 + i * 0.1 }}
-                                            className={`h-full ${getProgressColor(item.score)}`}
-                                        />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* PREP 结构检测 */}
-                <Card className="mb-8">
+                {/* 核心功能：原文批改 (Visual Feedback) */}
+                <Card className="border-2 border-primary/10 shadow-lg">
                     <CardHeader>
-                        <CardTitle>PREP 结构检测</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <MessageCircle className="w-5 h-5 text-primary" />
+                            原文批改
+                        </CardTitle>
+                        <CardDescription>点击 <span className="text-red-500 font-medium border-b border-red-400">红色文字</span> 查看具体问题</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-wrap items-center gap-4">
-                            <Badge variant={prep_analysis.point_detected ? "default" : "destructive"}>
-                                {prep_analysis.point_detected ? "✓ 检测到观点" : "✗ 未检测到明确观点"}
-                            </Badge>
-                            <span className="text-muted-foreground">
-                                结论位置：
-                                <span className="font-medium text-foreground ml-1">
-                                    {prep_analysis.conclusion_position === "start" && "开头（很好！）"}
-                                    {prep_analysis.conclusion_position === "middle" && "中间"}
-                                    {prep_analysis.conclusion_position === "end" && "结尾（建议移到开头）"}
-                                    {prep_analysis.conclusion_position === "missing" && "未找到"}
-                                </span>
-                            </span>
+                    <CardContent className="space-y-6">
+                        {/* 原文展示区 */}
+                        <div className="bg-muted/30 p-6 rounded-xl min-h-[120px]">
+                            {renderHighlightedText()}
                         </div>
+
+                        {/* 诊断气泡/提示区 (交互反馈) */}
+                        <AnimatePresence mode="wait">
+                            {selectedSegment ? (
+                                <motion.div
+                                    key={selectedSegment.text}
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-4 rounded-r-lg"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                                        <div>
+                                            <p className="font-bold text-red-800 dark:text-red-200 mb-1">
+                                                问题诊断：&quot;{selectedSegment.text}&quot;
+                                            </p>
+                                            <p className="text-red-700 dark:text-red-300 text-sm">
+                                                {selectedSegment.comment}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <div className="h-4" /> // 占位，防止跳动，或者留空
+                            )}
+                        </AnimatePresence>
                     </CardContent>
                 </Card>
 
-                {/* 详细分析标签页 */}
-                <Tabs defaultValue="segments" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="segments">文本高亮</TabsTrigger>
-                        <TabsTrigger value="advice">改进建议</TabsTrigger>
-                        <TabsTrigger value="raw">原始数据</TabsTrigger>
-                    </TabsList>
+                {/* 核心功能：参考答案 (Benchmark) */}
+                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                            <Heart className="w-5 h-5" />
+                            高情商参考
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-lg leading-relaxed text-green-800 dark:text-green-200">
+                            {advice[0].replace(/^(✨ )?高情商重写版本：/, "")}
+                        </p>
+                    </CardContent>
+                </Card>
 
-                    <TabsContent value="segments" className="mt-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>表达亮点与问题</CardTitle>
-                                <CardDescription>
-                                    <span className="inline-flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded-full"></span> 表达良好</span>
-                                    <span className="inline-flex items-center gap-1 ml-4"><span className="w-3 h-3 bg-red-500 rounded-full"></span> 需要改进</span>
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {segments.map((segment, i) => (
-                                        <motion.div
-                                            key={i}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: i * 0.1 }}
-                                            className={`p-4 rounded-lg border-l-4 ${segment.type === "highlight_good"
-                                                ? "bg-green-50 dark:bg-green-950/20 border-green-500"
-                                                : "bg-red-50 dark:bg-red-950/20 border-red-500"
-                                                }`}
-                                        >
-                                            <p className="font-medium mb-2">&quot;{segment.text}&quot;</p>
-                                            <p className={`text-sm ${segment.type === "highlight_good"
-                                                ? "text-green-700 dark:text-green-300"
-                                                : "text-red-700 dark:text-red-300"
-                                                }`}>
-                                                {segment.comment}
-                                            </p>
-                                        </motion.div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                {/* 更多建议折叠 */}
+                <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground font-medium ml-1">更多沟通技巧：</p>
+                    <ul className="space-y-3">
+                        {advice.slice(1).map((tip, i) => (
+                            <li key={i} className="flex items-start gap-3 p-3 bg-muted rounded-lg text-sm">
+                                <Badge variant="outline" className="mt-0.5 shrink-0">{i + 1}</Badge>
+                                <span>{tip}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
 
-                    <TabsContent value="advice" className="mt-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>改进建议</CardTitle>
-                                <CardDescription>根据你的表达，AI 提供的具体改进方向</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="space-y-3">
-                                    {advice.map((item, i) => (
-                                        <motion.li
-                                            key={i}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: i * 0.1 }}
-                                            className="flex items-start gap-3 p-4 bg-muted rounded-lg"
-                                        >
-                                            <Badge className="mt-0.5">{i + 1}</Badge>
-                                            <span>{item}</span>
-                                        </motion.li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="raw" className="mt-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>原始分析数据</CardTitle>
-                                <CardDescription>GPT-4o 返回的完整 JSON</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
-                                    {JSON.stringify(result, null, 2)}
-                                </pre>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
+                {/* 闭环行动：再练一次 */}
+                <div className="pt-8 pb-12">
+                    <Link href="/practice">
+                        <Button size="lg" className="w-full text-lg h-14 shadow-xl hover:scale-[1.02] transition-transform">
+                            <RotateCcw className="mr-2 w-5 h-5" />
+                            带着建议，再试一次
+                        </Button>
+                    </Link>
+                    <p className="text-center text-xs text-muted-foreground mt-4">
+                        持续练习是提升情商的唯一捷径
+                    </p>
+                </div>
             </motion.div>
         </main>
     );

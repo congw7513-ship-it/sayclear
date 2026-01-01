@@ -2,12 +2,12 @@
 // 匹配 GPT-4o 返回的 JSON Schema
 
 export interface AnalysisScores {
-    /** 逻辑性评分 (0-100) */
-    logic: number;
-    /** 结构性评分 (0-100) */
-    structure: number;
-    /** 表达效率评分 (0-100) */
-    efficiency: number;
+    /** 共情力评分 (0-100) - 是否照顾到了对方情绪 */
+    empathy: number;
+    /** 非暴力沟通评分 (0-100) - 是否符合观察/感受/需求/请求 */
+    nvc_score: number;
+    /** 安全感评分 (0-100) - 是否不带攻击性 */
+    safety: number;
 }
 
 export interface PrepAnalysis {
@@ -37,6 +37,8 @@ export interface AnalysisResult {
     advice: string[];
     /** 需要高亮的文本片段 */
     segments: Segment[];
+    /** 原始录音转录文本 */
+    original_transcript?: string;
 }
 
 // API 请求类型
