@@ -16,7 +16,12 @@ import {
     Loader2,
     Lightbulb,
     CheckCircle2,
-    MicOff
+    MicOff,
+    UploadCloud,
+    BrainCircuit,
+    Search,
+    FileText,
+    Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -36,6 +41,15 @@ const PREP_HINTS = [
     { letter: "R", title: "Reason", desc: "解释原因" },
     { letter: "E", title: "Example", desc: "举例证明" },
     { letter: "P", title: "Point", desc: "重申结论" },
+];
+
+// 分析步骤定义 (动态展示)
+const ANALYSIS_STEPS = [
+    { text: "正在上传音频数据...", icon: UploadCloud },
+    { text: "Whisper 正在精准转录...", icon: Mic },
+    { text: "AI 正在拆解逻辑结构...", icon: BrainCircuit },
+    { text: "正在检测逻辑谬误...", icon: Search },
+    { text: "生成最终诊断报告...", icon: FileText },
 ];
 
 // ============================================
@@ -158,6 +172,9 @@ function PracticeContent() {
 
     // 实时语音转文字状态
     const [realtimeText, setRealtimeText] = useState("");
+
+    // 分析步骤轮播状态
+    const [analysisStep, setAnalysisStep] = useState(0);
 
     // 录音相关 Refs
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -348,6 +365,22 @@ function PracticeContent() {
 
         return () => clearInterval(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state]);
+
+    // 分析步骤轮播定时器
+    useEffect(() => {
+        if (state !== "analyzing") {
+            setAnalysisStep(0);
+            return;
+        }
+
+        const stepTimer = setInterval(() => {
+            setAnalysisStep(prev =>
+                prev < ANALYSIS_STEPS.length - 1 ? prev + 1 : prev
+            );
+        }, 1200);
+
+        return () => clearInterval(stepTimer);
     }, [state]);
 
     // 进入录音状态时自动开始录音
@@ -684,7 +717,7 @@ function PracticeContent() {
                             )}
 
                             {/* ============================================ */}
-                            {/* ANALYZING 状态：AI 分析中 */}
+                            {/* ANALYZING 状态：AI 分析中 (HUD 风格) */}
                             {/* ============================================ */}
                             {state === "analyzing" && (
                                 <motion.div
@@ -695,38 +728,71 @@ function PracticeContent() {
                                     transition={{ duration: 0.3 }}
                                     className="py-8"
                                 >
-                                    <div className="text-center">
-                                        <motion.div
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                            className="mx-auto mb-6"
-                                        >
-                                            <Loader2 className="w-16 h-16 text-primary" />
-                                        </motion.div>
-                                        <CardTitle className="text-2xl">AI 正在分析逻辑...</CardTitle>
-                                    </div>
-                                    <p className="text-muted-foreground animate-pulse text-center mt-4">
-                                        正在分析您的表达逻辑...
-                                    </p>
-                                    <div className="space-y-4 max-w-xs mx-auto mt-8">
-                                        {["语音转文字", "识别 PREP 结构", "逻辑评分", "生成建议"].map((step, i) => (
+                                    {/* 主要内容区 */}
+                                    <div className="text-center space-y-8">
+                                        {/* 动态图标展示 */}
+                                        <AnimatePresence mode="wait">
                                             <motion.div
-                                                key={step}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: i * 0.5 }}
-                                                className="flex items-center gap-3"
+                                                key={analysisStep}
+                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                transition={{ duration: 0.3 }}
+                                                className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
                                             >
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    transition={{ delay: i * 0.5 + 0.3 }}
-                                                >
-                                                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                                </motion.div>
-                                                <span className="text-muted-foreground">{step}</span>
+                                                {(() => {
+                                                    const CurrentIcon = ANALYSIS_STEPS[analysisStep].icon;
+                                                    return <CurrentIcon className="w-10 h-10 text-primary animate-pulse" />;
+                                                })()}
                                             </motion.div>
-                                        ))}
+                                        </AnimatePresence>
+
+                                        {/* 当前步骤文字 */}
+                                        <AnimatePresence mode="wait">
+                                            <motion.p
+                                                key={analysisStep}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="text-xl font-medium text-foreground"
+                                            >
+                                                {ANALYSIS_STEPS[analysisStep].text}
+                                            </motion.p>
+                                        </AnimatePresence>
+
+                                        {/* 进度条 */}
+                                        <div className="max-w-xs mx-auto">
+                                            <Progress
+                                                value={((analysisStep + 1) / ANALYSIS_STEPS.length) * 100}
+                                                className="h-2"
+                                            />
+                                            <p className="text-xs text-muted-foreground mt-2">
+                                                步骤 {analysisStep + 1} / {ANALYSIS_STEPS.length}
+                                            </p>
+                                        </div>
+
+                                        {/* 步骤指示器 (小圆点) */}
+                                        <div className="flex justify-center gap-2">
+                                            {ANALYSIS_STEPS.map((step, i) => (
+                                                <motion.div
+                                                    key={i}
+                                                    className={`w-2 h-2 rounded-full transition-colors duration-300 ${i <= analysisStep
+                                                            ? "bg-primary"
+                                                            : "bg-muted-foreground/30"
+                                                        }`}
+                                                    animate={{
+                                                        scale: i === analysisStep ? 1.3 : 1
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        {/* 底部提示 */}
+                                        <p className="text-sm text-muted-foreground animate-pulse">
+                                            <Sparkles className="inline w-4 h-4 mr-1" />
+                                            AI 正在深度分析您的表达逻辑...
+                                        </p>
                                     </div>
                                 </motion.div>
                             )}
