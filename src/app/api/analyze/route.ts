@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
             if (modeInput === "work" || modeInput === "relationship") {
                 mode = modeInput;
             }
-            console.log("🎯 [API] 场景模式:", mode);
+            console.log("[API] 场景模式:", mode);
         }
         // ------------------------------------------
         // 情况 B: JSON (文本输入)
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
             if (body.mode === "work" || body.mode === "relationship") {
                 mode = body.mode;
             }
-            console.log("🎯 [API] 场景模式:", mode);
+            console.log("[API] 场景模式:", mode);
         }
         // ------------------------------------------
         // 情况 C: 不支持的格式
