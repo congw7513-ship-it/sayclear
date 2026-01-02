@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, RotateCcw, ChevronDown, ChevronUp, Sparkles, MessageSquare } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { AnalysisResult, Segment } from "@/types/analysis";
+import { AnalysisResult } from "@/types/analysis";
 import { MOCK_ANALYSIS_RESULT } from "@/lib/mock-data";
 
 // 从文本中提取场景信息
@@ -256,7 +256,7 @@ export default function ReportPage() {
 
                             {/* 完整话术 */}
                             <p className="text-lg font-medium text-emerald-800 leading-relaxed mb-6">
-                                "{eqResponse || advice[0]}"
+                                &ldquo;{eqResponse || advice[0]}&rdquo;
                             </p>
 
                             {/* 公式拆解 */}
@@ -268,7 +268,7 @@ export default function ReportPage() {
                                             <Badge className="shrink-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs">
                                                 {step.label}
                                             </Badge>
-                                            <span className="text-sm text-emerald-700">"{step.content}"</span>
+                                            <span className="text-sm text-emerald-700">&ldquo;{step.content}&rdquo;</span>
                                         </div>
                                     ))}
                                 </div>

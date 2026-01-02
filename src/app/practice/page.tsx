@@ -6,7 +6,6 @@ import { Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
     ArrowLeft,
     Mic,
@@ -18,9 +17,7 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 
-import { MOCK_MODE } from "@/lib/mock-data";
 import { AnalyzeResponse } from "@/types/analysis";
-import { ScenarioSelector } from "@/components/practice/ScenarioSelector";
 import { type QuickScenario, QUICK_SCENARIOS } from "@/lib/constants";
 
 
@@ -33,83 +30,6 @@ type PracticeState = "idle" | "thinking" | "recording" | "analyzing";
 
 // 场景配置 - 情绪翻译官定位
 type ScenarioMode = "work" | "relationship";
-
-
-// 场景数据结构
-interface Scenario {
-    title: string;
-    subtitle: string;
-    placeholder: string;
-    buttonText: string;
-}
-
-// 场景池配置
-const SCENARIO_POOLS: Record<ScenarioMode, Scenario[]> = {
-    work: [
-        {
-            title: "职场嘴替：把不满变成专业",
-            subtitle: "现在的场景：\n临下班 5 分钟，甲方突然发来第 10 版修改意见，\n推翻了核心逻辑，还轻飘飘地说“很简单，今晚改完再走”。\n（无需客气，在这里把想怼的话都说出来）",
-            placeholder: "例如：这个需求改了800遍了，你们到底懂不懂产品？（尽管吐槽）",
-            buttonText: "按住吐槽"
-        },
-        {
-            title: "拒绝背锅：优雅回击甩锅行为",
-            subtitle: "现在的场景：\n明明是第三方接口挂了导致项目延期，\n周会上同事却暗示是你跟进不到位，老板的脸色已经沉下来了。\n（别忍着，把事情的真相和委屈说出来）",
-            placeholder: "例如：明明是他们的问题，凭什么赖我头上？我每天催进度记录都有！",
-            buttonText: "按住反击"
-        },
-        {
-            title: "拒绝白嫖：拒绝不合理的加班",
-            subtitle: "现在的场景：\n隔壁部门的领导笑嘻嘻地过来说“就帮我看一眼，很快的”，\n结果直接想把整个模块甩给你负责，还没有任何排期。\n（不用给面子，直接表达你的拒绝）",
-            placeholder: "例如：我也很忙好吗？这种大活怎么可能顺手就做了？",
-            buttonText: "按住拒绝"
-        },
-        {
-            title: "应对微管理：反击窒息式控制",
-            subtitle: "现在的场景：\n老板每隔 10 分钟就问一次“进度怎么样”，\n甚至连你邮件的标点符号都要逐字修改，你感觉完全被束缚了。\n（深呼吸，把这种窒息感说出来）",
-            placeholder: "例如：你能不能别一直盯着我？我是来工作的，不是来当打字员的！",
-            buttonText: "按住吐槽"
-        },
-        {
-            title: "被抢功劳：夺回属于你的光芒",
-            subtitle: "现在的场景：\n整个方案都是你熬夜做的，\n结果今天的汇报会上，同事拿着你的PPT侃侃而谈，老板还夸他做得好。\n（太气人了，把你的愤怒大声说出来）",
-            placeholder: "例如：那都是我一个字一个字写的！他怎么好意思说是他的？",
-            buttonText: "按住吐槽"
-        }
-    ],
-    relationship: [
-        {
-            title: "把你的委屈/愤怒发泄出来",
-            subtitle: "现在的场景：\nTA 下班回家就瘫在沙发上刷视频，对你的话爱搭不理。\n你忙前忙后做了一桌菜，让他洗个手吃饭都要催三遍。\n（无需压抑，在这里把火气都发泄出来）",
-            placeholder: "例如：你烦不烦啊？每天回家就玩手机，当我是保姆吗？（直接说大实话！）",
-            buttonText: "按住倾诉"
-        },
-        {
-            title: "拒绝家务失衡：我不是保姆",
-            subtitle: "现在的场景：\n约定好轮流做家务，这周已经是你连续第 5 天洗碗了。\nTA 吃完饭推开碗筷就去打游戏，完全没有要动的意思。\n（别惯着，把你的不满发泄出来）",
-            placeholder: "例如：凭什么每次都是我收拾？你手断了吗？",
-            buttonText: "按住倾诉"
-        },
-        {
-            title: "打破冷暴力：拒绝沉默",
-            subtitle: "现在的场景：\n昨天吵架后 TA 就一直冷暴力，\n把家里当旅馆，问什么都不说话，把你当透明人。\n（这种感觉太糟糕了，把你的绝望喊出来）",
-            placeholder: "例如：你要冷战到什么时候？这日子还过不过了？",
-            buttonText: "按住倾诉"
-        },
-        {
-            title: "对抗双重标准：我要公平",
-            subtitle: "现在的场景：\nTA 可以和朋友聚会喝到半夜，\n你只是稍微晚回一点就被夺命连环 Call，这种不信任让你窒息。\n（把这种不公平的感受说出来）",
-            placeholder: "例如：只许州官放火是吧？你自己玩到几点心里没数吗？",
-            buttonText: "按住倾诉"
-        },
-        {
-            title: "纪念日被遗忘：失望透顶",
-            subtitle: "现在的场景：\n今天是结婚纪念日，你精心准备了礼物，\nTA 却空手回家，还一脸懵地问你“今天吃什么”，仿佛完全忘了这回事。\n（心凉了半截，把这份失望说出来）",
-            placeholder: "例如：你根本就不在乎我对不对？连这种日子都能忘！",
-            buttonText: "按住倾诉"
-        }
-    ]
-};
 
 
 // ============================================
